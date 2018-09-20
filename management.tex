@@ -162,7 +162,7 @@ There are some extensions to the base design described above that could be made,
 
 \subsection{Adding the artDAQ boardReader to the RCE}
 \label{sec:board reader}
-The artDAQ software suite is the most likely choice to be used for the backend DAQ.  artDAQ consists of three main part:  a boardReader which reads from the electronics (in this case, the RCEs), an eventBuilder which collects the fragments from the boardReaders and assembles them into events, and an Aggregator which takes the build events and writes them to disk.  In both the 35ton and protoDUNE prototypes, the each of these stages ran on different tiers of PCs.  However, it should be possible to include the boardReader stage on the RCEs themselves, eliminating a tier of PCs for the trigged data path. 
+The artDAQ software suite is the most likely choice to be used for the backend DAQ.  artDAQ consists of three main part:  a boardReader which reads from the electronics (in this case, the RCEs), an eventBuilder which collects the fragments from the boardReaders and assembles them into events, and an Aggregator which takes the build events and writes them to disk.  In both the 35ton and protoDUNE prototypes, the each of these stages ran on different tiers of PCs.  However, it should be possible to include the boardReader stage on the RCEs themselves, eliminating a tier of PCs for the triggered data path. 
 
 Implementing the boardReader on the RCEs will mainly involve working to build the needed artDAQ packages and their dependencies on the ARM/ArchLinux architecture.  Fermilab CD scientists had begun investigating the feasibility of this but shifted focus to the protoDUNE DAQ project.  This task will likely require a combination of artDAQ, Fermilab CD and  RCE experts and careful version control and management from both sides.  
 
@@ -174,8 +174,17 @@ Implementing the boardReader on the RCEs will mainly involve working to build th
 
 \subsection{Dual-RCE DPM}
 \label{sec:dualRCE}
+We believe it's possible to put two of the Ultrascale-RCEs on a single DPM which would have considerable cost savings over the single-RCE DPM currently in production.  This is not unprecedented as the Gen-3 DPMs, used in 35-ton and protoDUNE, carry 2 RCEs/DPM.  
 
+The concept art for this design is shown in Figure \ref{fig:dualRCE}.  While this design is almost duplicated from the single-RCE/DPM design, there is only room on the board for a single chip of DDR4 memory.  There are some risks associated with making the board more dense (heat load, power usage/COB) but they are low.  Going to a single chip of 8GB of memory reduces our buffer size, reducing the latency we can allow for triggers though by the time these would go into production 16GB chips may become available and cost-effective.  
 
+\begin{figure}[tb]
+\centering
+\includegraphics[width=0.5\textwidth]{images/dual-RCE-DPM.pdf}.
+\caption{\label{fig:dualRCE}Block diagram and concept art of the dual-RCE DPM.}
+\end{figure}
+
+The cost breakdown of the dual-RCE design is shown in Table \ref{tab:HDMScost}.  The reduction in cost primarily comes from the halving of each item of equipment needed: the COBs, RMTs, and crates.  The dual-RCE design would also obviously take half the rack space necessary and somewhat reducing the total power need. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Summary}
