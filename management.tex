@@ -15,7 +15,7 @@
 
 Table \ref{tab:baseMScost} shows the cost estimate for the RCE/ATCA hardware.  The estimates for the COB and DTM are based on actual units that have been produced for the LSST experiment.  Costs for the DPM and RTM are estimates based on past production of similar parts and quotes for the new components (FPGA, memory and SSDs).  The crate cost,  with power supplies and shelf manager, is based on past purchases.  
 
-\begin{table}[htdp]
+\begin{table}[htp]
 \begin{center}
 \begin{tabular}{|c|c|c|c|c|}
 \hline
@@ -45,7 +45,7 @@ Crate		&   11	&	8,500		&	0	&	93,500	\\
 We also include a table of hardware cost estimates for the dual-RCE/DPM system described in Section \ref{sec:upgrades}.  As shown, the estimated cost of the hardware is reduced by $\sim$\$1M with very little change in firmware or software needed.  
 
 
-\begin{table}[htdp]
+\begin{table}[htp]
 \begin{center}
 \begin{tabular}{|c|c|c|c|c|}
 \hline
@@ -79,7 +79,7 @@ Crate		&   6	&	8,500		&	0	&	51,000	\\
 Table \ref{tab:basecostLabor} shows a breakdown of estimate engineer or technician labor needed for this project.  The timescale is from now (roughly start of FY19) until 
 2024 (when the first detect is scheduled to be complete).   We haven't included non-expert (i.e. physicists) labor here but expect we should have 2-3 FTE of graduate student, post-doc or staff level who are "experts" on the system at all times during the integration, installation and commissioning phases.  
 
-\begin{table}[htdp]
+\begin{table}[htp]
 \begin{center}
 \begin{tabular}{|c|c|l|}
 \hline
@@ -168,7 +168,12 @@ Implementing the boardReader on the RCEs will mainly involve working to build th
 
 \subsection{Including Trigger Decision Processing on RCE Cluster}
 \label{sec:triggerOnRCE}
-As mentioned above, there is 
+ As mentioned above,  each RCE has a significant CPU onboard. The base design (even with the boardReader process) should use very few of these computing resources; basically it is just directing traffic between streams.  The high-speed links connecting each RCE (10 or even 40 Gbps, depending on the choice of switch) could make the COB platform a good place to do a first level of the trigger decision processing.  Actions such as clustering of trigger primitives and, since  each COB deals with at least 1 APA's worth of data (or two, see below), APA-level decisions could be performed.  
+ 
+ This project would take significant effort but likely doesn't require much RCE-expert level intervention to complete.  
+
+\subsection{Dual-RCE DPM}
+\label{sec:dualRCE}
 
 
 

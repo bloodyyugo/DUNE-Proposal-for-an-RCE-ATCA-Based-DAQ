@@ -53,11 +53,11 @@ Another example is the problem of organizing the data into event fragments, comm
 
 \subsubsection{SuperNova Data Collection}
 Acquiring data from a SuperNova is a goal not shared with proto-DUNE and presents a unique set of challenges.  The consensus is the 
-\begin{enumeration}
+\begin{enumerate}
    \item these are rare, on the order of once per month, 
    \item the trigger can come from either an external or internal source and may have a large latency
    \item they last on the scale minutes, but interesting data could stretch much further, i.e. more is better
-\end{enumeration}
+\end{enumerate}
 
 The design addresses these problems by employing dual buffers. The first is a pre-buffer implemented in RAM.  This will be continuously written to, capturing in a circular fashion the last 10 seconds of all data.  This buffer serves two purposes. First to provide the latency needed to cover the trigger arrival time and second to provide as much data leading up to the trigger time. 
 
