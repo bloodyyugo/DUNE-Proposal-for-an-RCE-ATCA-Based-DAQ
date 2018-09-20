@@ -1,0 +1,88 @@
+\section{RCE Software}
+\label{sec:software}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Rogue}
+%%% Ryan
+
+The SLAC TID-AIR Electronics group has created a mixed Python/C++ platform to service as both a hardware abstraction layer and a lightweight Data Acquisition System call Rogue. Unlike many current similar platforms which wrap python around existing C++ software or are written entirely in Python, Rogue is architected to allow the appropriate mix of C++ and Python, allowing high performance multi-threaded processing in the C++ layer while still utilizing the flexibility and dynamic nature of Python. 
+     Rogue allows the numerous modules and registers in a larger hardware system to be organized into trees using Python classes. This organization simplifies the interaction with hardware while allowing complex initialization and operation state machines to be defined at various levels. Registers in the hardware are abstracted as a set of variables and commands which are exposed to the user, as well as to numerous, simultaneous external managed systems including EPCIS, Python scripts, custom GUIs and third party DAQ systems.
+     The Rogue architecture allows the user to create data processing plug in modules written either in C++ or Python. This allows for quick prototyping of processing modules in Python with the ability to later move that processing to C++ if required for performance.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Remote access to external software}
+%%% Ryan
+
+Rogue variables and Commands may be accessed directly in the local python instance, using the Python Remote Objects (Pyro4) protocol, or through a third party control layer using a plugin. Currently plugins exist for EPICS V3 channel access and EPICS V4 PV access protocols, as well as a Mysql gateway. A dynamic GUI is provided which can be attached directly to the server instance or attached remotely using Pyro4. A shared memory interface is also supported.
+     Rogue Variables and Commands may also be accessed through a C++ API which wraps around the Rogue Python structures, allowing the the Rogue platform to be integrated into any C++ based data acquisition system.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Data transfer, Super Nova Data Buffering \& Memory Management}
+%%% Ryan/JJ
+
+The basic functions of the proto-DUNE software running on the ARM were
+\begin{enumerate}
+   \item Initialization and management of firmware configuration registers
+   \item Monitoring of both firmware and software performance values
+   \item Event fragment formation
+\end{enumerate}
+
+This same functionality will exist in the DUNE version, In DUNE, the software's responsibilities expand in two ways. First, additional functionality is needed to handle the Super Nova Data.  Second, the CPU and memory bandwidth on the current RCE limited it to what amounted to traffic cop. It could organize data and do rudimentary functions, but it could not get involved in anything that involved touching even a small fraction of the data. The much greater power afforded by the UltraScale's 2 CPUs, GPU, and, maybe, most importantly the increased memory bandwidth allows greater freedom in effectively and efficiently partitioning the workload between the FPGA and CPU.
+
+\subsubsection{Initialization and Management of Firmware Configuration Registers}
+The tight coupling between the FPGA and processor allows simple and director control of the firmware's configuration register. Examples of such register are mode control, counter resets, etc. Much of the software that was used on proto-DUNE has been updated to be more performant and convenient.  However, the basic usage model remains the same, so does not require a change in philosophy, thus easing the transition.
+
+\subsubsection{Monitoring of Firmware and Software Performance Values}
+Again the tight coupling makes monitoring firmware register values straightforward.  Examples of such values would be error counters, bandwidth measurements, link status, etc.  In addition, there will be a similar values maintained to monitor the software itself.  These values provide the experiment with a window into the system performance and possible error conditions.  
+The existing Rogue software allows both the configuration and status registers to be written and read from a host CPU tasked with overseeing the collection of RCEs.
+
+\subsubsection{Event Fragment formation}
+There are variety of subfunctions under this heading.  The software will be responsible for
+\begin{enumerate}
+    \item Receiving triggers
+    \item Defining the relevant time span associated with received triggers
+    \item Forming a request to the FPGA so that the data can be located
+    \item Organizing the data into event fragments
+    \item Initiating the transmision of the event fragments off the RCE to a host base event builder.
+\end{enumerate}
+
+Rather than giving a detailed explanation of each, a few highlights will be noted.  The proposed architecture does not require the FPGA to do all this. Functionality that is FPGA resource intensive can be more easily done by the CPU. For example, buffer management is complicated by using compression which results in variable sized blocks.  Doing this in software is a better option than the complexity and resources needed to do the equivalent in firmware.
+
+The design principle is to split the workload between the FPGA and CPU according to each's strengths.  As an example, a key feature of the proto-DUNE event fragment transmission was that it was zero-copy, hardware base, The software did the complex, but not computationally intensive task of data selection, but then offloaded the actual transfer to the FPGA, saving both memory bandwidth and CPU cycles.
+
+Another example is the problem of organizing the data into event fragments, commonly referred to as event building. This problem is basically the same as proto-DUNE with the difference being one of scale. On proto-DUNE, the software had to aggregate only two streams of 128 channels.  For DUNE, this could be from 5-10 such streams. Increasing the number of streams to aggregate typically introduces new problems and/or magnifies existing ones.  Attempting this is firmware would be much harder.
+
+\subsubsection{SuperNova Data Collection}
+Acquiring data from a SuperNova is a goal not shared with proto-DUNE and presents a unique set of challenges.  The consensus is the 
+\begin{enumeration}
+   \item these are rare, on the order of once per month, 
+   \item the trigger can come from either an external or internal source and may have a large latency
+   \item they last on the scale minutes, but interesting data could stretch much further, i.e. more is better
+\end{enumeration}
+
+The design addresses these problems by employing dual buffers. The first is a pre-buffer implemented in RAM.  This will be continuously written to, capturing in a circular fashion the last 10 seconds of all data.  This buffer serves two purposes. First to provide the latency needed to cover the trigger arrival time and second to provide as much data leading up to the trigger time. 
+
+The second buffer is a very large post-buffer implemented in SSD.  Because of the wear properties of SSDs, this buffer is only written when a SuperNova trigger is received. At the anticipated rate of 1 per month, this will not tax the lifetime of SSDs. Because the data is written as ordinary files, transfer of the data will be trivial using standard Unix commands like scp.
+
+% Explain how the pre-buffer DRAM and post-buffer SSD will be used, TCP or Timing network based trigger?, transfer pre-buffer into post-buffer (post-buffer being simple EXT4 file write), data collection through simple SCP? Explain why it will be easier to do the buffer management in software (instead of firmware) due to the dynamic packet size handling (dynamic due to compression)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Trigger Primitive Messaging and Network}
+%%% Ryan/JJ
+
+% Explain how the software will receive the trigger primitive messages, are the trigger primitive message batched together to minimize the DMA interrupt rate?, once message received in RCE software, where does it go and who makes the trigger decision?, once the trigger decision made how the software looks through the super nova pre-buffer to fetch the trigger event (using pre-buffer to cache the data for all trigger type events).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Possible additional topics:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% remote booting of RCEs and how it would work if we have different versions of RCE firmware/software running
+% possible usage of the GPU and the RealTime (RT) CPU
+% Running ART-DAQ on the ZYNQ's CPU
+% revision control of firmware/software
+% slow health monitoring of the system (board temperatures, fan speeds, power consumptions)
+% possible to tightly integrate the photo system via LCLS-II AMC carrier platform into ATCA trigger primitive backplane 
+
+
+
+

@@ -1,0 +1,130 @@
+\section{RCE Firmware}
+\label{sec:firmware}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{AMBA Industry-Standard between Firmware modules}
+%%%  Ryan
+RCE is an ARM-centric platform. AMBA stands for ARM Advanced Microcontroller Bus Architecture. The interface between the PS/PL for Zynq’s ARM is AMBA Advanced eXtensible Interface (AXI). There are 3 types of AXI interfaces (AXI, AXI-Lite, AXI stream). AXI is a high performance memory interface and used to move data in/out of memory (example: writing data to the DRAM). AXI-Lite is a low performance, single transaction, 32-bit memory interface and used for all the firmware modules' slow controls and monitoring. AXI stream is a streaming data interfaces with flow control and is used to move stream data between the different firmware modules.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{RCE's core}
+%%% Ryan
+The base firmware core of the DPM provides a AXI-Lite interface for configuring all the firmware modules, AXI stream DMA interfaces for moving bulk data between the firmware/software and a 40 GbE PHY/MAC for software's Ethernet.  This 40 GbE PHY/MAC has a user tap for optional firmware based RUDP communication.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Timing Module}
+This firmware module receives and decodes the  timing serial stream that repeated from the DTM.  The decoded stream provides a 2 MHz heart beat, a trigger and 64-bit time stamp which is distributed to the other firmware modules.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{WIB Receiver}
+%%% Larry
+This firmware module combines multiple WIB links with time alignment into a single stream (event builds based on WIB header’s time stamp). It is able to support dropping “out of time” WIB frames and able to automatically recover from rare bit error events. In the case of a bad link, it is able to move data even if 1 (or more) links are down.  During the development process when a WIB link is not available, the WIB receiver is able to emulate the WIB links locally.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Trigger Primitive/Waveform Extraction}
+%%% JJ
+There are 3 components to this firmware module (Filter, Pedestal I/RMS, Hit Finder).
+The filter component reduces coherent and common-mode noise via FIR filters.  The FIR filters will be software configurable registers in firmware. The Pedestal I/RMS calculate weighted-moving-average of pedestal and RMS.  The hit finder component finds the "hit" and creates a trigger primitive message of this hit.  This message will include information like time of hit, charge (or peak), length over threshold, channel number and APA number. Bad or faulty channels will be able to be masked off via software configurable registers in firmware.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Data Compression}
+%%% JJ
+This module will be a lossless data compression of the ADC data. A compression factor of 3 or better on average must be achieved to fit within the 10 second pre-buffer of 7GB of DRAM.
+
+The compression deployed in the RCE has achieved a factor of 4 on proto-DUNE data. The encoding method is Arithmetic Probability (AP) Encoding.  When AP uses the probability distributions of the data being compressed, it achieves, to within a bit or two, the entropy limit. However, resource usage is an issue. Given the goal is a factor 3 in compression, cheaper schemes are being considered.  There are two ways to reduce the resource usage
+
+\begin{enumerate}
+    \item Going from fully dynamic to periodically updated tables   
+    \item Using a less ambitious encoder
+\end{enumerate}
+
+
+\subsubsection{Periodically Updated Tables}
+A large fraction of the resource usage for proto-DUNE results from forming the probability distributions in real time. Using pre-calculated, but periodically updated, tables will greatly reduce the footprint. Software running on the ARM processor will sample the input data to form these tables on a channel-by-channel basis and periodically update the firmware on an appropriate time scale (minutes).
+
+The resource savings is not only in the logic needed to compute the tables, but the data no longer has to be buffered while the tables are being formed, eliminating the need for the BRAM to hold the data. In effect, the encoders can now be implemented as streamers.
+
+While the tables are not fully dynamic, they will follow trends in the data adding to robustness. 
+
+This method takes advantage of both the dramatically increased processing power on the Xilinx UltraScale and the tight coupling between the processor and FPGA fabric. The downside is that, because they are not dynamic and, thus not matching the distribution being compressed, the compression will be reduced.  This loss should be small and acceptable for this application.
+
+\subsubsection{Alternative Encoders}
+There are number of compression methods being considered
+\begin{enumerate}
+   \item A less ambitious Arithmetic Probability Encoder
+   \item Huffman
+   \item RICE
+   \item Fibonacci 
+\end{enumerate}
+
+The first two are statistical encoders and, therefore have greater upside compression potential. The RICE and Fibonacci encoding are self-contained, eliminating the need for maintaining any compression tables. 
+
+Table \ref{tab:DataCompression} shows our programmable logic estimates for different compression algorithms. The estimates for memory usage are based on encoding packets of 512-1024 x 640 channels of 12-bit ADCs. A brief descriptions of each method follows.
+
+\subsubsection{AP Encoding}
+The kernel for the AP kernel is estimated to take 3-5K LUTs. Assuming 1 cycle per encoded ADC and a 5 nsec. FPGA clock, one encoding engine could handle 64-96 channels at a sample period of 500 nsecs. Taking the conservative 64 channels per encoding engine and 640 total channels, this means 10 encoders running in parallel, using 30-50KLUTs.
+
+The memory resource usage is dominated by the storage to capture the compressed results from each compression engine and serialize it to an output stream. Writing the compressed data out interleaved would reduce this resource at the cost of making the decoding somewhat more costly.  Given the usage, this may be acceptable.
+
+\subsubsection{Huffman}
+A Huffman encoder with pre-computed codes would be very small, effectively just a bit stuffer.  To encode the value ‘val’, the encoder is almost as simple as
+
+  \begin{center} 
+    write (output, table[val].nbits, table[val].bits);   
+   \end{center}
+   
+\subsubsection{RICE}
+This compressor works with a small number of samples at a time (say 16). It has been used extensively by the astronomy community to compress images, so there are many existing FPGA implementations. To be effective, the values to be encoded must be small numbers. 
+RICE has the advantage that there is no need for an encoding table, eliminating the code to compute and maintain it.
+
+
+\subsection{Fiboncci}
+This is mentioned only for completeness. Since the table is just the Fibonacci numbers with a suffix bit, like RICE, it requires no updating.  From an implementation viewpoint, the encoder is just like Huffman, a simple bit stuffer, but with a different table. The downside it is likely would be limited to a compression factor of around 2.
+
+
+
+\begin{table}[tb]
+\centering
+\begin{tabular}{|l|c|c|c|l|}
+\hline
+Algorithm Type                  & kLUTs & kFFs  & DSPs & RAM (Mb) \\ \hline
+Arithmetic Probability Encoding & 50   & 40   & 20   & 9-18     \\ \hline
+Huffman                         & 20   & 10   &  0   & 9-18     \\ \hline
+Rice                            & 30   & 20   &  0   & n/a      \\ \hline
+Fibanocci                       & 30   & 20   &  0   & n/a      \\ \hline
+\end{tabular}
+\caption{ Estimation of the Programmable Logic Resources for different compression Algorithms for RCE with 640 ADC channels}
+\label{tab:DataCompression}
+\end{table}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{ Programmable Logic Resource Estimations }
+%%% Larry
+
+A summary table of the programmable logic resources required for the RCE is shown in Table \ref{tab:FpgaResources}. Our current estimates show that the design will fit into the programmable logic side of the ZYNQ.  
+
+\begin{table}[tb]
+\centering
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% https://www.tablesgenerator.com/
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{tabular}{|l|c|c|c|c|l|}
+\hline
+FW Module        & kLUTs & kFFs & DSPs & RAM (Mb) & Notes                                    \\ \hline
+RCE Core         & 36    & 48   & 9    & 9.7      & Based on existing Oxford/SLAC RCE core   \\ \hline
+Timing Receiver  & 2     & 4    & 0    & 0.1      & Based on proto-dune Timing Receiver      \\ \hline
+WIB Receiver     & 16    & 25   & 0    & 0.7      & Based on proto-dune WIB Receiver         \\ \hline
+Filtering        & 24    & 19   & 320  & 0.0      & Based on Xilinx IP core (FIR w/ 32-taps) \\ \hline
+Pedestal I/RMS   & 25    & 20   & 50   & 0.5      & Estimation for 640 12-bit ADC channels   \\ \hline
+Hit-finding      & 25    & 25   & 50   & 1.0      & Estimation for 640 12-bit ADC channels   \\ \hline
+Data Compression & 20    & 10   & 0    & 18.0     & Based on Huffman estimate                \\ \hline
+\rowcolor[HTML]{FFFFC7} 
+Total            & 148 & 151 & 429  & 30.0        & Summation of modules above               \\ \hline
+\rowcolor[HTML]{67FD9A} 
+Utilization      & 43\%   & 22\%   & 12\% & 52\%  & Based on XCZU15EG resources              \\ \hline
+\end{tabular}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\caption{ Estimation of the Programmable Logic Resources Required for RCE with 640 ADC channels }
+\label{tab:FpgaResources}
+\end{table}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
