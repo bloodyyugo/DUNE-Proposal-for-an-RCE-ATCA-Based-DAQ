@@ -81,7 +81,7 @@ The design shown in Figure \ref{fig:base} is an evolution of those used for the 
 \begin{itemize}
     \item an upgraded COB with 8x10Gbps or 8x40Gbps ethernet ports (note:  this was developed and built for the LSST experiment) 
     \item an upgraded SOC on the RCE with somewhat more FPGA resources, improved memory bandwidth and DDR4 compatibility, and an improved CPU
-    \item at least 8GB DDR4  memory/RCE (up from 1GB DDR3) and a PCIe connected NVMe SSD for triggered supernova buffering
+    \item at least 8GB DDR4  memory/RCE (up from 1GB DDR3) and a PCIe connected NVMe SSD for triggered supernova buffering\cite{SNBuff}
     \item a trigger-primitive data path with firmware performing filtering and hit-finding on incoming wave-forms and streaming to a trigger decision cluster
     \item a supernova path which, upon receipt of a supernova trigger, sends data to the onboard SSD for a fixed number of seconds and then trickles the data out to a backend system
 \end{itemize}

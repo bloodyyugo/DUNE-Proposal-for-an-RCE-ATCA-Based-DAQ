@@ -16,7 +16,7 @@ Rogue variables and Commands may be accessed directly in the local python instan
      Rogue Variables and Commands may also be accessed through a C++ API which wraps around the Rogue Python structures, allowing the the Rogue platform to be integrated into any C++ based data acquisition system.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Data transfer, Super Nova Data Buffering \& Memory Management}
+\subsection{Data transfer, Supernova Data Buffering \& Memory Management}
 %%% Ryan/JJ
 
 The basic functions of the proto-DUNE software running on the ARM were
@@ -26,7 +26,7 @@ The basic functions of the proto-DUNE software running on the ARM were
    \item Event fragment formation
 \end{enumerate}
 
-This same functionality will exist in the DUNE version, In DUNE, the software's responsibilities expand in two ways. First, additional functionality is needed to handle the Super Nova Data.  Second, the CPU and memory bandwidth on the current RCE limited it to what amounted to traffic cop. It could organize data and do rudimentary functions, but it could not get involved in anything that involved touching even a small fraction of the data. The much greater power afforded by the UltraScale's 2 CPUs, GPU, and, maybe, most importantly the increased memory bandwidth allows greater freedom in effectively and efficiently partitioning the workload between the FPGA and CPU.
+This same functionality will exist in the DUNE version, In DUNE, the software's responsibilities expand in two ways. First, additional functionality is needed to handle the supersova data\cite{SNTrig}.  Second, the CPU and memory bandwidth on the current RCE limited it to what amounted to traffic cop. It could organize data and do rudimentary functions, but it could not get involved in anything that involved touching even a small fraction of the data. The much greater power afforded by the UltraScale's 2 CPUs, GPU, and, maybe, most importantly the increased memory bandwidth allows greater freedom in effectively and efficiently partitioning the workload between the FPGA and CPU.
 
 \subsubsection{Initialization and Management of Firmware Configuration Registers}
 The tight coupling between the FPGA and processor allows simple and director control of the firmware's configuration register. Examples of such register are mode control, counter resets, etc. Much of the software that was used on proto-DUNE has been updated to be more performant and convenient.  However, the basic usage model remains the same, so does not require a change in philosophy, thus easing the transition.
