@@ -89,55 +89,55 @@ Table \ref{tab:basecostLabor} shows a breakdown of estimate engineer or technici
 \hline
 \multicolumn{3}{|l|}{\bf Hardware}   \\
 \hline
- Ultra-scale DPM testing \& validation &  2      & To begin soon at Oxford soon\\
+ Ultra-scale DPM testing \& validation &  4      & To begin  at Oxford soon\\
   \hline 
   Ultra-scale DPM second spin  &  3      & Likely needed, includes testing \& validation\\
   \hline 
-    Rear-Transition Module Design  &  0.5    &  After WIB and timing interfaces  \\
+    Rear-Transition Module Design  &  1    &  After WIB and timing interfaces  \\
     &&have been fixed; based on past designs\\
 \hline
 \hline
 \multicolumn{3}{|l|} {\bf RCE Firmware}   \\
 \hline
-Ultrascale upgrades to core RCE firmware     & 2 & Incorporate improvements \\
+Ultrascale upgrades to core RCE firmware     & 4 & Incorporate improvements \\
 \hline
-WIB-RCE data interface   & 0.25&  Higher destiny and format changes (if any) \\
+WIB-RCE data interface   & 1&  Higher destiny and format changes (if any) \\
 \hline
-Compression   & 3 & Add slimmer  engine \\
+Compression   & 6 & Add slimmer  engine \\
 \hline
-Trigger Primitive Finding   & 3 &Including formatting and DMA \\
+Trigger Primitive Finding   & 6 &Including formatting and DMA \\
 \hline
-Buffering   &  3  &  Improved buffer management \\
+Buffering   &  6  &  Improved buffer management \\
 \hline
 \hline
 \multicolumn{3}{|l|} {\bf RCE Software}   \\
 \hline
-Switch to Rogue	&	2	&	Currently using old C++-based software \\
+Switch to Rogue	&	4	&	Currently using old C++-based software \\
 \hline
-Trigger Primitive Data Path	&	1	&Output from memory to backend via RSSI \\
+Trigger Primitive Data Path	&	2	&Output from memory to backend via RSSI \\
 \hline
-Triggered Data Path	&	1	&		Output from memory to backend via RSSI \\
+Triggered Data Path	&	2	&		Output from memory to backend via RSSI \\
 \hline
-SN Data Path:  to SSD &	3	&	 Output from memory to SN SSD via PCIe bus \\
+SN Data Path:  to SSD &	6	&	 Output from memory to SN SSD via PCIe bus \\
 \hline
-SN Data Path:  from SSD &	3	&	Output from SN SSD to backend via RSSI \\
+SN Data Path:  from SSD &	6	&	Output from SN SSD to backend via RSSI \\
 \hline
 \hline
 \multicolumn{3}{|l|} {\bf Testing \& Integration}   \\
 \hline
-RCE Slice Testing	&	3	&	Full firmware and software chain \\
+RCE Slice Testing	&	6	&	Full firmware and software chain \\
 \hline
-DAQ VST Support	&	6	&	Integration with other hard/soft components \\
+DAQ VST Support	&	12	&	Integration with other hard/soft components \\
 \hline
-Non-DAQ Test stands	&	6	&	Support for CE testing\\
+Non-DAQ Test stands	&	12	&	Support for CE testing\\
 \hline
 \hline
-{\bf Total FTE-months pre-install}&   41.75  & \\
+{\bf Total FTE-months pre-install}&  81  & \\
 \hline
 \hline 
 \multicolumn{3}{|l|}{\bf Installation \& Commissioning}   \\
 \hline
-Integration, Installation \& Commissioning  & 36  & Continually at some level 2019-2024\\
+Integration, Installation \& Commissioning  & 48  & Continually at some level 2019-2024\\
 \hline
 \hline
 \end{tabular}
@@ -174,17 +174,17 @@ Implementing the boardReader on the RCEs will mainly involve working to build th
 
 \subsection{Dual-RCE DPM}
 \label{sec:dualRCE}
-We believe it's possible to put two of the Ultrascale-RCEs on a single DPM which would have considerable cost savings over the single-RCE DPM currently in production.  This is not unprecedented as the Gen-3 DPMs, used in 35-ton and protoDUNE, carry 2 RCEs/DPM.  
+As shown in Figure \ref{fig:DpmUltrascaleBlockDiagram},  we believe it's possible to put two of the Ultrascale-RCEs on a single DPM which would have considerable cost savings over the single-RCE DPM currently in production.  This is not unprecedented as the Gen-3 DPMs, used in 35-ton and protoDUNE, carry 2 RCEs/DPM.  
 
-The concept art for this design is shown in Figure \ref{fig:dualRCE}.  While this design is almost duplicated from the single-RCE/DPM design, there is only room on the board for a single chip of DDR4 memory.  There are some risks associated with making the board more dense (heat load, power usage/COB) but they are low.  Going to a single chip of 8GB of memory reduces our buffer size, reducing the latency we can allow for triggers though by the time these would go into production 16GB chips may become available and cost-effective.  
-
-\begin{figure}[tb]
-\centering
-\includegraphics[width=0.5\textwidth]{images/dual-RCE-DPM.pdf}.
-\caption{\label{fig:dualRCE}Block diagram and concept art of the dual-RCE DPM.}
-\end{figure}
+% \begin{figure}[tb]
+% \centering
+% \includegraphics[width=0.5\textwidth]{images/dual-RCE-DPM.pdf}.
+% \caption{\label{fig:dualRCE}Block diagram and concept art of the dual-RCE DPM.}
+% \end{figure}
 
 The cost breakdown of the dual-RCE design is shown in Table \ref{tab:HDMScost}.  The reduction in cost primarily comes from the halving of each item of equipment needed: the COBs, RMTs, and crates.  The dual-RCE design would also obviously take half the rack space necessary and somewhat reducing the total power need. 
+
+Apart from the hardware design and testing, the amount of additional labor is quite small for the dual-RCE DPM.  The same software and firmware would be used for both the single- and dual-RCE solutions.  
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Summary}

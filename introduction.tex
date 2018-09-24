@@ -1,7 +1,12 @@
 \begin{abstract}
 %%%  Matt
-The DUNE DAQ system design presents a number of unique challenges, including XXXX, YYYY, and ZZZZ.   This note describes an RCE/ATCA-based DAQ system that meets these challenges and blah blah...
-
+The DUNE physics program is highly heterogeneous with important goals in beam physics, SuperNova burst neutrino detection and the related topics of nucleon decay and non-beam neutrinos.
+Each of these topics requires a different data acquisition strategy for identifying and storing the relevant part of the 10 Tb/s stream of data coming from each 17 kT LArTPC module. 
+Consequently, the DAQ system for the DUNE Far Detector LArTPC must be flexible and highly performant to meet all of these requirements.
+This note describes a modest evolution of the system already demonstrated at the ProtoDUNE-SP detector that meets all of these requirements. 
+It is based on the RCE/ATCA system developed at SLAC. 
+Because the major components of this system have already been demonstrated, a relatively small additional development effort is needed to extend its performance to that needed for the DUNE-FD. 
+Adopting this system minimizes the technical risk and design costs and thus represents a very attractive technical solution.
 
 \end{abstract}
 
@@ -29,20 +34,68 @@ The DUNE DAQ high-level design include 3 parts:  the front-end readout, the trig
 
 In this note we will describe a DAQ design based around the RCE/ATCA platform reading out the TPC front-end.  We begin by detailing the RCE, COB, and ATCA hardware in Section \ref{sec:RCEPlatformOverview}, followed by describing the existing firmware (Section \ref{sec:firmware}) and software (Section \ref{sec:software}).  
 
+This note uses many acronyms; please see Table \ref{tab:acronym} for a list of commonly used ones.  
 
-\subsection{Data Flow in the RCE/ATCA Design }
+\begin{table}[htp]
+\begin{center}
+\begin{tabular}{|c|c|}
+\hline
+Acronym  &  Full Name \\
+\hline
+\hline
+APA  & Anode Plane Assembly\\
+\hline
+FEMB  & Front End Mother Board\\
+\hline
+WIB  &  Warm Interface Board  \\
+\hline
+ATCA  &  Advanced TeleCommunications Architecture\\
+\hline
+RTM  & Rear Transmission Module  \\
+\hline
+COB  &  Cluster On Board  \\
+\hline
+DTM  &  Data Timing/Trigger Module  \\
+\hline
+DPM  &  Data Processing Module  \\
+\hline
+RCE  &  Reconfigurable Cluster Element\\
+\hline
+%SOC  & System-On-Chip   \\
+%\hline
+\end{tabular}
+\end{center}
+\caption{List of acronyms used frequently in this note.  }
+\label{tab:acronym}
+\end{table}%
 
 
-The RCE/ATCA system is at it's core a number of interconnected System-On-Chips (SOCs) residing on  ATCA blades in an industry standard ATCA shelf.   The SOCs are on daughter boards,  four to an ATCA blade, and include at least 8GB of attached memory.  (...define RCE somewhere...) The ATCA blade, called a Cluster-On-Board (COB), is a high-bandwidth device utilizing the MGTs on the SOCs for high-speed IO and a 10-Gbps ethernet switch connecting each RCE to each other and having 4 10-Gbps ports out of the COB\footnote{A version of the COB with a 40 Gbps switch is currently under design.} .  
+\subsection{Overview of the RCE/ATCA Design }
 
-In the base RCE/ATCA design described here, the only data that flows out of the ATCA shelf are the trigger primitives, to be processed by the trigger system PCs, and the triggered data itself, to be built into events and stored (or processed further in a software filter).  The data flow is illustrated in Figure \ref{fig:base}.  
 
+
+The RCE/ATCA system is at it's core a number of interconnected SOCs residing on  ATCA blades in an industry standard ATCA shelf.   The SOCs are on daughter boards (DPMs),  four to an ATCA blade, and include at least 8GB of attached memory.  The ATCA blade, called a Cluster-On-Board (COB), is a high-bandwidth device utilizing the MGTs on the SOCs for high-speed IO and a 10-Gbps ethernet switch connecting each RCE to each other and having 4 10-Gbps ports out of the COB\footnote{A version of the COB with a 40 Gbps switch is currently under design.} .  
+
+
+The design shown in Figure \ref{fig:base} is an evolution of those used for the 35-ton and then protoDUNE prototype DAQs.  The additional features for the DUNE DAQ include:
+\begin{itemize}
+    \item an upgraded COB with 8x10Gbps or 8x40Gbps ethernet ports (note:  this was developed and built for the LSST experiment) 
+    \item an upgraded SOC on the RCE with somewhat more FPGA resources, improved memory bandwidth and DDR4 compatibility, and an improved CPU
+    \item at least 8GB DDR4  memory/RCE (up from 1GB DDR3) and a PCIe connected NVMe SSD for triggered supernova buffering
+    \item a trigger-primitive data path with firmware performing filtering and hit-finding on incoming wave-forms and streaming to a trigger decision cluster
+    \item a supernova path which, upon receipt of a supernova trigger, sends data to the onboard SSD for a fixed number of seconds and then trickles the data out to a backend system
+\end{itemize}
+The other features of Figure \ref{fig:base}, e.g. data receiving, compression, buffering etc., have all been implemented in the protoDUNE DAQ and would require only minor changes to implement for DUNE.  
+
+In the base RCE/ATCA design described here, the only data that flows out of the ATCA shelf are the trigger primitives, to be processed by the trigger system PCs,, the triggered data itself, to be built into events and stored (or processed further in a software filter).  A summary of the COB input and output numbers are shown in Table \ref{tab:hsIO}.  
 
 \begin{figure}[tb]
 \centering
-\includegraphics[width=0.9\textwidth]{images/base_rce_dune_dataflow.pdf}
+\includegraphics[width=1.0\textwidth]{images/base_rce_dune_dataflow.pdf}
 \caption{\label{fig:base}Block diagram of of data flow in the RCE from the WIBs and to the trigger and backend DAQ systems. }
 \end{figure}
+
+
 
 \begin{table}[htp]
 \begin{center}
@@ -65,7 +118,7 @@ Triggered SN Data out via Ethernet  & 1   &  $\sim$0.0 -10 Gbps\\
 \end{tabular}
 \end{center}
 \caption{Summary of data connections and estimated bandwidths in and out of COB. This assumes 1 COB/APA.  Note that triggered primitives and triggered data would likely go over the same physical link (possibly the SN Data out as well).  }
-\label{default}
+\label{tab:hsIO}
 \end{table}%
 
 \begin{table}[htp]
@@ -89,26 +142,26 @@ WIB Links into RTM & 20 & /COB\\
 RCEs    & 4  &  /COB\\
 WIB Links into RCE & 5 & /RCE\\
 Data Bandwidth into RCE & 17.5 Gbps & /RCE\\
-DDR4 Memory    & 16 GB & /RCE\\
+DDR4 Memory    & 8 GB & /RCE\\
 Compression Factor (assumed)  & 3  &  \\
-Buffer Depth (no compression)   &  $\sim$7.5  &  s  \\
-Buffer Depth (with compression)   &  $\sim$22  &  s  \\
+Buffer Depth (no compression)   &  $\sim$3.8  &  s  \\
+Buffer Depth (with compression)   &  $\sim$11  &  s  \\
 SSD Write Speed (measured)  & 1.6 & GBps \\ 
-SN Dump Time (no compression)  &  $\sim$ 30  & s\\
+SN Dump Time (no compression)  &  $\sim$ 15  & s\\
 SN Dump Time (with compression)  &  $\infty$  & s\\
 \hline
 \end{tabular}
 \end{center}
-\caption{ Numbers pertaining to the RCE/ATCA part of the DAQ assuming 1 COB/APA.  Note FEMB=Front-End Mother Board; WIB=Warm-Interface Board.  The WIBs output link configuring has not been settled yet, though we prefer to use 4-5Gbps links (each link = 1 FEMB).  The TPC data + headers on these links is listed in the table and is ~3.5 Gbps. }
-\label{default}
+\caption{ Numbers pertaining to the RCE/ATCA part of the DAQ assuming 1 COB/APA using the Oxford/SLAC Ultrascale+ RCE.  Note FEMB=Front-End Mother Board; WIB=Warm-Interface Board.  The WIBs output link configuring has not been settled yet, though we prefer to use 4-5Gbps links (each link = 1 FEMB).  The TPC data + headers on these links is listed in the table and is ~3.5 Gbps. }
+\label{tab:apaNums}
 \end{table}%
 
 
 
-The advantages of the RCE/ATCA design over a PC/software only design include: 
-\begin{itemize}
-\item some amazing points
-\end{itemize}
+%The advantages of the RCE/ATCA design over a PC/software only design include: 
+%\begin{itemize}
+%\item some amazing points
+%\end{itemize}
 
 
 
